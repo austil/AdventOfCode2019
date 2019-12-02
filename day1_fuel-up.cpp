@@ -4,11 +4,11 @@
 #include "utils.cpp"
 
 int fuelForModule(const int moduleMass) {
-  return std::floor(moduleMass / 3) - 2;
+  return floor(moduleMass / 3) - 2;
 }
 
 int fuelForModuleFixed(const int moduleMass) {
-  const int initialFuel = std::floor(moduleMass / 3) - 2;
+  const int initialFuel = floor(moduleMass / 3) - 2;
   return initialFuel > 0 ? initialFuel + fuelForModuleFixed(initialFuel) : 0;
 }
 
