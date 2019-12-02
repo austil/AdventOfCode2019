@@ -4,6 +4,8 @@
 #include "utils.cpp"
 
 int fuelForModule(const int moduleMass) {
+  // note : floor is useless because integer division does truncation toward zero
+  // https://stackoverflow.com/questions/3602827/what-is-the-behavior-of-integer-division
   return floor(moduleMass / 3) - 2;
 }
 
