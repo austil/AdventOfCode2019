@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <cassert>
 #include <cmath>
+#include <string>
 #include "utils.cpp"
 
 vector<vector<string>> parse(const vector<string> strs)
@@ -15,27 +16,33 @@ vector<vector<string>> parse(const vector<string> strs)
   return wires;
 }
 
-struct movementSummary
+std::hash<std::string> hash_fn;
+struct position
 {
-  int nextX {0};
-  int nextY {0};
-  unordered_set<string> positions;
+  int x {0};
+  int y {0};
+  int wireLength {0};
+
+  size_t operator() (const position &p) const noexcept {
+    return hash_fn(to_string(p.x) + "," + to_string(p.y));
+  }
 };
 
+bool operator== (const position &p1, const position &p2) {
+  return p1.x == p2.x && p1.y == p2.y;
+}
 
-movementSummary getMovementSummary(const int startX, const int startY, const string movement)
+
+vector<position> getMovementSummary(position startPosition, const string movement)
 {
-  movementSummary summary;
+  vector<position> positions;
   const char direction = movement.front();
   const int length = stoi(movement.substr(1));
 
-  summary.nextX = startX + (direction == 'R'? length : (direction == 'L' ? -length : 0));
-  summary.nextY = startY + (direction == 'U'? length : (direction == 'D' ? -length : 0));
-
   for (int i = 1; i <= length; i++)
   {
-    int x = startX;
-    int y = startY;
+    int x = startPosition.x;
+    int y = startPosition.y;
     if      (direction == 'U') { y += i; }
     else if (direction == 'D') { y -= i; }
     else if (direction == 'L') { x -= i; }
@@ -44,25 +51,23 @@ movementSummary getMovementSummary(const int startX, const int startY, const str
       cerr << "Unexpected direction for movement: " << movement << "\n";
       throw;
     }
-    const auto pos = to_string(x) + "," + to_string(y);
-    summary.positions.insert(pos);
+    const position pos = { x, y, startPosition.wireLength + length };
+    positions.push_back(pos);
   }
 
-  return summary;
+  return positions;
 }
 
 int nearestCrossing(const vector<vector<string>> wires)
 {
-  vector<unordered_set<string>> positionsUsedByWires;
+  vector<unordered_set<position, position>> positionsUsedByWires;
   for(auto &wire : wires) {
-    int x = 0;
-    int y = 0;
-    unordered_set<string> positions;
+    position currentPosition = { 0, 0, 0 };
+    unordered_set<position, position> positions;
     for(auto &movement: wire) {
-      movementSummary summary = getMovementSummary(x, y, movement);
-      x = summary.nextX;
-      y = summary.nextY;
-      positions.insert(summary.positions.begin(), summary.positions.end());
+      auto summary = getMovementSummary(currentPosition, movement);
+      currentPosition = summary.back();
+      positions.insert(summary.begin(), summary.end());
     }
     positionsUsedByWires.push_back(positions);
   }
@@ -70,8 +75,7 @@ int nearestCrossing(const vector<vector<string>> wires)
   int shortestDistance = 0;
   for(auto position : positionsUsedByWires[0]) {
     if(positionsUsedByWires[1].find(position) != positionsUsedByWires[1].end()) {
-      const auto [x,y] = cut(position, ",");
-      const int distance = abs(stoi(x)) + abs(stoi(y));
+      const int distance = abs(position.x) + abs(position.y);
       // cout << position << " @ " << distance << "\n";
       if(shortestDistance == 0 || shortestDistance > distance) {
         shortestDistance = distance;
@@ -85,17 +89,20 @@ int nearestCrossing(const vector<vector<string>> wires)
 int main(int argc, char const *argv[])
 {
   // Part 1
-  movementSummary m1 = getMovementSummary(0, 0, "R2");
-  assert(m1.positions.size() == 2);
-  assert(m1.nextX == 2);
-  assert(m1.nextY == 0);
-  movementSummary m2 = getMovementSummary(0, 0, "D8");
-  assert(m2.positions.size() == 8);
-  assert(m2.nextX == 0);
-  assert(m2.nextY == -8);
-  movementSummary m3 = getMovementSummary(8, 0, "U5");
-  assert(m3.nextX == 8);
-  assert(m3.nextY == 5);
+  vector<position> m1 = getMovementSummary({0, 0, 0}, "R2");
+  assert(m1.size() == 2);
+  assert(m1.back().wireLength == 2);
+  assert(m1.back().x == 2);
+  assert(m1.back().y == 0);
+  vector<position> m2 = getMovementSummary({0, 0, 0}, "D8");
+  assert(m2.size() == 8);
+  assert(m2.back().wireLength == 8);
+  assert(m2.back().x == 0);
+  assert(m2.back().y == -8);
+  vector<position> m3 = getMovementSummary({8, 0, 10}, "U5");
+  assert(m3.back().wireLength == 15);
+  assert(m3.back().x == 8);
+  assert(m3.back().y == 5);
 
   const vector<string> wires1 = {"R8,U5,L5,D3", "U7,R6,D4,L4"};
   assert(nearestCrossing(parse(wires1)) == 6);
