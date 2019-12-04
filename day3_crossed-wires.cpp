@@ -33,7 +33,7 @@ bool operator== (const position &p1, const position &p2) {
 }
 
 
-vector<position> getMovementSummary(position startPosition, const string movement)
+vector<position> getMovementSummary(const position startPosition, const string movement)
 {
   vector<position> positions;
   const char direction = movement.front();
@@ -51,14 +51,20 @@ vector<position> getMovementSummary(position startPosition, const string movemen
       cerr << "Unexpected direction for movement: " << movement << "\n";
       throw;
     }
-    const position pos = { x, y, startPosition.wireLength + length };
+    const position pos = { x, y, startPosition.wireLength + i };
     positions.push_back(pos);
   }
 
   return positions;
 }
 
-int nearestCrossing(const vector<vector<string>> wires)
+struct result
+{
+  int nearestCrossManhattan;
+  int nearestCrossWire;
+};
+
+result tracePath(const vector<vector<string>> wires)
 {
   vector<unordered_set<position, position>> positionsUsedByWires;
   for(auto &wire : wires) {
@@ -72,18 +78,25 @@ int nearestCrossing(const vector<vector<string>> wires)
     positionsUsedByWires.push_back(positions);
   }
 
-  int shortestDistance = 0;
-  for(auto position : positionsUsedByWires[0]) {
-    if(positionsUsedByWires[1].find(position) != positionsUsedByWires[1].end()) {
-      const int distance = abs(position.x) + abs(position.y);
-      // cout << position << " @ " << distance << "\n";
-      if(shortestDistance == 0 || shortestDistance > distance) {
-        shortestDistance = distance;
+  int nearestCrossManhattan = 0;
+  int nearestCrossWire = 0;
+  for(auto firstWirePosition : positionsUsedByWires[0]) {
+    const auto findSecondWire = positionsUsedByWires[1].find(firstWirePosition);
+    if(findSecondWire != positionsUsedByWires[1].end()) {
+      const int manhattanDistance = abs(firstWirePosition.x) + abs(firstWirePosition.y);
+      if(nearestCrossManhattan == 0 || nearestCrossManhattan > manhattanDistance) {
+        nearestCrossManhattan = manhattanDistance;
+      }
+
+      const auto secondWirePosition = (*findSecondWire);
+      const auto wireDistance = firstWirePosition.wireLength + secondWirePosition.wireLength;
+      if(nearestCrossWire == 0 || nearestCrossWire > wireDistance) {
+        nearestCrossWire = wireDistance;
       }
     }
   }
 
-  return shortestDistance;
+  return { nearestCrossManhattan, nearestCrossWire };
 }
 
 int main(int argc, char const *argv[])
@@ -105,13 +118,23 @@ int main(int argc, char const *argv[])
   assert(m3.back().y == 5);
 
   const vector<string> wires1 = {"R8,U5,L5,D3", "U7,R6,D4,L4"};
-  assert(nearestCrossing(parse(wires1)) == 6);
+  assert(tracePath(parse(wires1)).nearestCrossManhattan == 6);
   const vector<string> wires2 = {"R75,D30,R83,U83,L12,D49,R71,U7,L72", "U62,R66,U55,R34,D71,R55,D58,R83"};
-  assert(nearestCrossing(parse(wires2)) == 159);
+  assert(tracePath(parse(wires2)).nearestCrossManhattan == 159);
   const vector<string> wires3 = {"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51", "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"};
-  assert(nearestCrossing(parse(wires3)) == 135);
+  assert(tracePath(parse(wires3)).nearestCrossManhattan == 135);
 
-  cout << "part1 - shortest distance: " << nearestCrossing(parse(getPuzzleInput("./inputs/aoc_day3_1.txt"))) << "\n";
+  const auto res =  tracePath(parse(getPuzzleInput("./inputs/aoc_day3_1.txt")));
+  cout << "part1 - Nearest Cross Manhattan: " << res.nearestCrossManhattan << "\n";
+
+  // Part 2
+  assert(tracePath(parse(wires1)).nearestCrossWire == 30);
+  const vector<string> wires4 = {"R75,D30,R83,U83,L12,D49,R71,U7,L72", "U62,R66,U55,R34,D71,R55,D58,R83"};
+  assert(tracePath(parse(wires4)).nearestCrossWire == 610);
+  const vector<string> wires5 = {"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51", "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"};
+  assert(tracePath(parse(wires5)).nearestCrossWire == 410);
+
+  cout << "part2 - Nearest Cross Wire: " << res.nearestCrossWire << "\n";
 
   return 0;
 }
