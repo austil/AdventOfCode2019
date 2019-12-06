@@ -15,16 +15,17 @@ vector<vector<string>> parse(const vector<string> strs)
   }
   return wires;
 }
-
-std::hash<std::string> hash_fn;
 struct position
 {
   int x {0};
   int y {0};
   int wireLength {0};
+};
 
+struct positionHash
+{
   size_t operator() (const position &p) const noexcept {
-    return hash_fn(to_string(p.x) + "," + to_string(p.y));
+    return hash<string>()(to_string(p.x) + "," + to_string(p.y));
   }
 };
 
@@ -66,10 +67,10 @@ struct result
 
 result tracePath(const vector<vector<string>> wires)
 {
-  vector<unordered_set<position, position>> positionsUsedByWires;
+  vector<unordered_set<position, positionHash>> positionsUsedByWires;
   for(auto &wire : wires) {
     position currentPosition = { 0, 0, 0 };
-    unordered_set<position, position> positions;
+    unordered_set<position, positionHash> positions;
     for(auto &movement: wire) {
       auto summary = getMovementSummary(currentPosition, movement);
       currentPosition = summary.back();
