@@ -87,7 +87,7 @@ int main(int argc, char const *argv[])
   assert(orbitsPath(parseToOrbitMap(testInput1), "COM").size() == 0);
   assert(orbitsSum(parseToOrbitMap(testInput1)) == 42);
 
-  const auto inputOrbitMap = parseToOrbitMap(getPuzzleInput("./inputs/aoc_day5_1.txt"));
+  const auto inputOrbitMap = parseToOrbitMap(getPuzzleInput("./inputs/aoc_day6_1.txt"));
   const auto p1 = orbitsSum(inputOrbitMap);
   cout << "Part 1, total number of direct and indirect orbits: " << p1 << "\n";
 
