@@ -1,5 +1,6 @@
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <algorithm>
 #include <tuple>
 #include <vector>
@@ -18,6 +19,18 @@ ostream &operator<<(ostream &os, const unordered_map<K, V> &m)
 
 template <typename T>
 ostream &operator<<(ostream &os, const vector<T> &v)
+{
+  os << "{\n";
+  for (const auto &e : v)
+  {
+    os << "  " << e << ",\n";
+  }
+  os << "}\n";
+  return os;
+}
+
+template <typename T>
+ostream &operator<<(ostream &os, const unordered_set<T> &v)
 {
   os << "{\n";
   for (const auto &e : v)
