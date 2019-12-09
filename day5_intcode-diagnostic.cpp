@@ -1,13 +1,11 @@
 #include <iostream>
-#include <vector>
 #include <queue>
-#include <cassert>
 #include "IntcodeComputer.cpp"
 
 int main(int argc, char const *argv[])
 {
   testComputer();
-  
+
   // Part 1
   queue<int> p1Inputs({1});
   const auto p1 = runProgram(parseIntcode(getPuzzleInput("./inputs/aoc_day5_1.txt").front()), p1Inputs);

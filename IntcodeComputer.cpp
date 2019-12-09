@@ -121,28 +121,28 @@ void testComputer() {
   queue<int> inputIsEight({8});
   queue<int> inputIsMoreThanEight({4847});
 
-  const auto equalsEight_p = parseIntcode("3,9,8,9,10,9,4,9,99,-1,8");
-  const auto equalsEight_i = parseIntcode("3,3,1108,-1,8,3,4,3,99");
+  const auto equalsEight_p = "3,9,8,9,10,9,4,9,99,-1,8";
+  const auto equalsEight_i = "3,3,1108,-1,8,3,4,3,99";
   assert(runProgram(equalsEight_p, inputIsEight).outputs.front() == 1);
   assert(runProgram(equalsEight_i, inputIsEight).outputs.front() == 1);
   assert(runProgram(equalsEight_p, inputIsLessThanEight).outputs.front() == 0);
   assert(runProgram(equalsEight_i, inputIsLessThanEight).outputs.front() == 0);
 
-  const auto lessThanEight_p = parseIntcode("3,9,7,9,10,9,4,9,99,-1,8");
-  const auto lessThanEight_i = parseIntcode("3,3,1107,-1,8,3,4,3,99");
+  const auto lessThanEight_p = "3,9,7,9,10,9,4,9,99,-1,8";
+  const auto lessThanEight_i = "3,3,1107,-1,8,3,4,3,99";
   assert(runProgram(lessThanEight_p, inputIsLessThanEight).outputs.front() == 1);
   assert(runProgram(lessThanEight_i, inputIsLessThanEight).outputs.front() == 1);
   assert(runProgram(lessThanEight_p, inputIsEight).outputs.front() == 0);
   assert(runProgram(lessThanEight_i, inputIsEight).outputs.front() == 0);
 
-  const auto isNotZero_p = parseIntcode("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9");
-  const auto isNotZero_i = parseIntcode("3,3,1105,-1,9,1101,0,0,12,4,12,99,1");
+  const auto isNotZero_p = "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9";
+  const auto isNotZero_i = "3,3,1105,-1,9,1101,0,0,12,4,12,99,1";
   assert(runProgram(isNotZero_p, inputIsEight).outputs.front() == 1);
   assert(runProgram(isNotZero_i, inputIsEight).outputs.front() == 1);
   assert(runProgram(isNotZero_p, inputIsZero).outputs.front() == 0);
   assert(runProgram(isNotZero_i, inputIsZero).outputs.front() == 0);
 
-  const auto compareToEight = parseIntcode("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99");
+  const auto compareToEight = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
   assert(runProgram(compareToEight, inputIsMoreThanEight).outputs.front() == 1001);
   assert(runProgram(compareToEight, inputIsEight).outputs.front() == 1000);
   assert(runProgram(compareToEight, inputIsLessThanEight).outputs.front() == 999);
