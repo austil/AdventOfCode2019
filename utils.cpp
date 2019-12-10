@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <tuple>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
@@ -39,6 +40,38 @@ ostream &operator<<(ostream &os, const unordered_set<T> &v)
   }
   os << "}\n";
   return os;
+}
+
+// https://stackoverflow.com/a/17050528/6289951
+template <typename T>
+vector<vector<T>> cart_product(const vector<vector<T>> &v)
+{
+  const auto n = pow(v.front().size(), v.size());
+  if(n > 100000) {
+    cout << "cart_product will take some time, n=" << n << "\n";
+  }
+
+  vector<vector<T>> s = {{}};
+  for (const auto &u : v)
+  {
+    vector<vector<T>> r;
+    for (const auto &x : s)
+    {
+      for (const auto y : u)
+      {
+        r.push_back(x);
+        r.back().push_back(y);
+      }
+      if(n > 100000 && r.size() % 10000 == 0) {
+        cout << "cart_product progess: +" << r.size() << " / " << n << "\n";
+      }
+    }
+    s = move(r);
+    if(n > 100000) {
+      cout << "cart_product progess: " << s.size() << " / " << n << "\n";
+    }
+  }
+  return s;
 }
 
 string trim(const string &s)

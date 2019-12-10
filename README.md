@@ -12,3 +12,5 @@ Stats thx to [Activity Watch](https://github.com/ActivityWatch/activitywatch) an
 * day 6 : 51min
 * day 7 : part 1 in 24min
 * day 8 : 53min
+* day 9 : not done yet
+* day 10 : wip 1h17min
