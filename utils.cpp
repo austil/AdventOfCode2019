@@ -43,6 +43,7 @@ ostream &operator<<(ostream &os, const unordered_set<T> &v)
 }
 
 // https://stackoverflow.com/a/17050528/6289951
+// Uselessly slow
 template <typename T>
 vector<vector<T>> cart_product(const vector<vector<T>> &v)
 {
