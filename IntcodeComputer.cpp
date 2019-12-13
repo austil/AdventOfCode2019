@@ -5,19 +5,20 @@
 #include <queue>
 #include "utils.cpp"
 
-struct ProgramResult
+struct ProgramState
 {
   vector<int> memory {};
+  queue<int> inputs {};
   vector<int> outputs {};
+  size_t instructionPointer = 0;
+  bool terminated = false;
 };
 
-ProgramResult runProgram(const vector<int> program, queue<int> inputs = {}) {
-  ProgramResult res;
-  res.memory = program;
-  size_t instructionPointer = 0;
+ProgramState runProgram(const ProgramState initialState) {
+  ProgramState state {initialState};
   bool run = true;
   while(run) {
-    const string instruction = to_string(res.memory[instructionPointer]);
+    const string instruction = to_string(state.memory[state.instructionPointer]);
     const int code = instruction.size() > 2 
       ? stoi(instruction.substr(instruction.size() - 2))
       : stoi(instruction);
@@ -33,57 +34,69 @@ ProgramResult runProgram(const vector<int> program, queue<int> inputs = {}) {
 
     const auto getParamValue = [&](int paramNumber){
       return isImmediateMode(paramNumber) 
-        ? res.memory[instructionPointer + paramNumber]
-        : res.memory[res.memory[instructionPointer + paramNumber]];
+        ? state.memory[state.instructionPointer + paramNumber]
+        : state.memory[state.memory[state.instructionPointer + paramNumber]];
     };
 
     if(code == 1 || code == 2) { // * & +
       const int op1 = getParamValue(1);
       const int op2 = getParamValue(2);
-      const int dest = res.memory[instructionPointer + 3];
-      res.memory[dest] = code == 1 ? op1 + op2 : op1 * op2;
-      instructionPointer += 4;
+      const int dest = state.memory[state.instructionPointer + 3];
+      state.memory[dest] = code == 1 ? op1 + op2 : op1 * op2;
+      state.instructionPointer += 4;
     }
     else if (code == 3) { // input
-      const int input = inputs.front();
-      inputs.pop();
-      const int dest = res.memory[instructionPointer + 1];
-      res.memory[dest] = input;
-      instructionPointer += 2;
+      if(state.inputs.empty()) {
+        return state;
+      }
+      const int input = state.inputs.front();
+      state.inputs.pop();
+      const int dest = state.memory[state.instructionPointer + 1];
+      state.memory[dest] = input;
+      state.instructionPointer += 2;
     }
     else if (code == 4) { // output
       const int value = getParamValue(1);
-      res.outputs.push_back(value);
-      instructionPointer += 2;
+      state.outputs.push_back(value);
+      state.instructionPointer += 2;
     }
     else if (code == 5 || code == 6) { // jump if true & jump if false
       const int op1 = getParamValue(1);
       if((code == 5 && op1 != 0) || (code == 6 && op1 == 0)) {
         const int op2 = getParamValue(2);
-        instructionPointer = op2;
+        state.instructionPointer = op2;
       } else {
-        instructionPointer += 3;
+        state.instructionPointer += 3;
       }
     }
     else if (code == 7 || code == 8) { // less than & equals
       const int op1 = getParamValue(1);
       const int op2 = getParamValue(2);
-      const int dest = res.memory[instructionPointer + 3];
-      res.memory[dest] = (code == 7 && op1 < op2) ? 1 : ((code == 8 && op1 == op2) ? 1 : 0);
-      instructionPointer += 4;
+      const int dest = state.memory[state.instructionPointer + 3];
+      state.memory[dest] = (code == 7 && op1 < op2) ? 1 : ((code == 8 && op1 == op2) ? 1 : 0);
+      state.instructionPointer += 4;
     }
     else if (code == 99) {
       run = false;
     }
     else {
-      cerr << "opCode not supported: " << code << " at position: " << instructionPointer << "\n";
-      cerr << program << "\n";
-      cerr << res.memory << "\n";
+      cerr << "opCode not supported: " << code << " at position: " << state.instructionPointer << "\n";
+      cerr << initialState.memory << "\n";
+      cerr << state.memory << "\n";
       throw;
     }
   }
-  return res;
+  state.terminated = true;
+  return state;
 }
+
+// Signature backward compatibility
+ProgramState runProgram(const vector<int> program, queue<int> inputs = {}) {
+  ProgramState initialState;
+  initialState.memory = program;
+  initialState.inputs = inputs;
+  return runProgram(initialState);
+};
 
 vector<int> parseIntcode(const string str) {
   const vector<string> opCodes = split(str, ",");
@@ -94,7 +107,8 @@ vector<int> parseIntcode(const string str) {
   return program;
 }
 
-ProgramResult runProgram(string program, queue<int> inputs = {}) {
+// Convenient signature for testing
+ProgramState runProgram(string program, queue<int> inputs = {}) {
   return runProgram(parseIntcode(program), inputs);
 }
 
@@ -146,6 +160,16 @@ void testComputer() {
   assert(runProgram(compareToEight, inputIsMoreThanEight).outputs.front() == 1001);
   assert(runProgram(compareToEight, inputIsEight).outputs.front() == 1000);
   assert(runProgram(compareToEight, inputIsLessThanEight).outputs.front() == 999);
+
+  // Day 7 part 2 tests, halt when waiting for input
+  assert(runProgram(compareToEight, inputIsLessThanEight).terminated == true);
+
+  queue<int> emptyInput {};
+  auto haltedState = runProgram(compareToEight, emptyInput);
+  assert(haltedState.terminated == false);
+  haltedState.inputs.push(8);
+  assert(runProgram(haltedState).terminated == true);
+  assert(runProgram(haltedState).outputs.front() == 1000);
 
   cout << "Intcode Computer test successful\n\n";
 }

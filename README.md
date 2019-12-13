@@ -10,7 +10,7 @@ Stats thx to [Activity Watch](https://github.com/ActivityWatch/activitywatch) an
 * day 4 : 18min
 * day 5 : 58min
 * day 6 : 51min
-* day 7 : part 1 in 24min
+* day 7 : 50min
 * day 8 : 53min
 * day 9 : not done yet
 * day 10 : part 1 in 1h39min
