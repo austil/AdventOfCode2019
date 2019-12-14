@@ -18,6 +18,16 @@ ostream &operator<<(ostream &os, const unordered_map<K, V> &m)
   return os;
 }
 
+template <typename K, typename V, typename H>
+ostream &operator<<(ostream &os, const unordered_map<K, V, H> &m)
+{
+  for (const pair<K, V> &p : m)
+  {
+    os << "{" << p.first << ": " << p.second << "}\n";
+  }
+  return os;
+}
+
 template <typename T>
 ostream &operator<<(ostream &os, const vector<T> &v)
 {
