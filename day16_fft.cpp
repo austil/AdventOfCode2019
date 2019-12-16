@@ -2,45 +2,29 @@
 #include <cassert>
 #include "utils.cpp"
 
-unordered_map<pair<size_t, size_t>, vector<int>, ulongPairHash> patternCache;
-
 const vector<int> basePattern {0, 1, 0, -1};
 
-vector<int> getRepeatingPattern(size_t repeatTime, size_t length) {
-  const auto cachedPattern = patternCache.find({repeatTime, length});
-  if(cachedPattern != patternCache.cend()) {
-    return cachedPattern->second;
-  }
-
-  vector<int> repeatingPattern;
-  for(size_t i = 0; i < length / repeatTime + 1; i++) {
-    for (size_t r = 0; r < repeatTime; r++){
-      if(repeatingPattern.size() <= length) {
-        repeatingPattern.push_back(basePattern.at(i % basePattern.size()));
-      }
-    }
-  }
-  repeatingPattern.erase(repeatingPattern.cbegin());
-  patternCache[{repeatTime, length}] = repeatingPattern;
-  return repeatingPattern;
+int getPatternValue(size_t repeatTime, size_t i) {
+  return basePattern.at((i / repeatTime) % basePattern.size());
 }
 
-unordered_set<vector<int>, vectorHash> nextSignalCache;
+vector<int> getRepeatingPattern(size_t repeatTime, size_t length) {
+  vector<int> repeatingPattern;
+  for(size_t i = 1; i <= length; i++) {
+    repeatingPattern.push_back(getPatternValue(repeatTime, i));
+  }
+  return repeatingPattern;
+}
 
 vector<int> nextPhase(vector<int> signal) {
   vector<int> nextSignal;
   for (size_t i = 1; i <= signal.size(); i++) {
-    const auto pattern = getRepeatingPattern(i, signal.size());
     int nextDigit = 0;
     for (size_t d = 0; d < signal.size(); d++){
-      nextDigit += pattern.at(d) * signal.at(d);
+      nextDigit += getPatternValue(i, d + 1) * signal.at(d);
     }
     nextSignal.push_back(abs(nextDigit % 10));
   }
-  if(nextSignalCache.find(nextSignal) != nextSignalCache.cend()) {
-    cout << "Déjà vu !\n";
-  }
-  nextSignalCache.insert(nextSignal);
   return nextSignal;
 };
 
@@ -97,7 +81,7 @@ int main(int argc, char const *argv[])
     repeatedInput += part1Input;
   }
   cout << "Part2 input length: " << repeatedInput.size() << "\n";
-  const auto part2FFT = FFT(parse(repeatedInput), 100);
+  // part 2 is not the same as part 1
 
   return 0;
 }
