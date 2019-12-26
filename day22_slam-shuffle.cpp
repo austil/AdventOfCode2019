@@ -3,10 +3,11 @@
 #include "utils.cpp"
 
 using Card = unsigned long long;
+using CardPosition = Card;
 using Deck = vector<Card>;
 
 Deck getSpaceCardDeck(Card l = 10007) {
-  Deck spaceCard(l);
+  Deck spaceCard;
   for (Card i = 0; i < l; i++)
   {
     spaceCard.push_back(i);
@@ -14,9 +15,20 @@ Deck getSpaceCardDeck(Card l = 10007) {
   return spaceCard;
 }
 
+CardPosition dealIntoNewStackIdx(CardPosition deckLength, CardPosition cardIndex) {
+  return deckLength - cardIndex - 1;
+}
+
 Deck dealIntoNewStack(const Deck &deck) {
   const Deck nextDeck(deck.crbegin(), deck.crend());
   return nextDeck;
+}
+
+CardPosition cutCardIdx(CardPosition deckLength, int cutN, CardPosition cardIndex) {
+  const auto cutIndex = cutN > 0 ? cutN : deckLength + cutN;
+  return cardIndex < cutIndex 
+    ? cardIndex + deckLength - cutIndex
+    : cardIndex - cutIndex;
 }
 
 Deck cutCard(const Deck &deck, int n) {
@@ -24,6 +36,10 @@ Deck cutCard(const Deck &deck, int n) {
   Deck nextDeck(deck.cbegin() + cutIndex, deck.cend());
   nextDeck.insert(nextDeck.cend(), deck.cbegin(), deck.cbegin() + cutIndex);
   return nextDeck;
+}
+
+CardPosition dealWithIncrementIdx(CardPosition deckLength, int incr, CardPosition cardIndex) {
+  return cardIndex * incr % deckLength;
 }
 
 Deck dealWithIncrement(const Deck &deck, int incr) {
@@ -34,6 +50,28 @@ Deck dealWithIncrement(const Deck &deck, int incr) {
     nextDeck.at(destIndex) = deck.at(i);
   }
   return nextDeck;
+}
+
+CardPosition suffleIdx(const vector<string> &steps, CardPosition deckLength, CardPosition cardIndex) {
+  CardPosition currentPosition = cardIndex;
+  for(const auto step : steps) {
+    const auto words = split(step, " ");
+    if(words.size() == 2 && words.at(0) == "cut") {
+      const int n = stoi(words.at(1));
+      currentPosition = cutCardIdx(deckLength, n, currentPosition);
+    }
+    else if (words.size() == 4 && words.at(1) == "with") {
+      const int n = stoi(words.at(3));
+      currentPosition = dealWithIncrementIdx(deckLength, n, currentPosition);
+    }
+    else if (words.size() == 4 && words.at(1) == "into") {
+      currentPosition = dealIntoNewStackIdx(deckLength, currentPosition);
+    } else {
+      cerr << "Unsuported step: " << step << "\n";
+      throw;
+    }
+  }
+  return currentPosition;
 }
 
 Deck suffle(const vector<string> &steps, Deck startingDeck) {
@@ -121,14 +159,38 @@ int main(int argc, char const *argv[])
   const auto p1SuffleSteps = getPuzzleInput("inputs/aoc_day22_1.txt");
   const auto p1Suffled = suffle(p1SuffleSteps, getSpaceCardDeck());
   const auto thisYear = find(p1Suffled.cbegin(), p1Suffled.cend(), 2019);
-  cout << "Part1, 2019 deck position: " << distance(p1Suffled.cbegin(), thisYear) << "\n";
+  if(thisYear == p1Suffled.cend()) {
+    cout << "Part1, 2019 card not found...\n";
+  }
+  else {
+    cout << "Part1, 2019 card position: " << distance(p1Suffled.cbegin(), thisYear) << "\n";
+  }
 
+  // Clever solution
+  assert(dealIntoNewStackIdx(10, 3) == 6);
+  assert(cutCardIdx(10, 3, 3) == 0);
+  assert(cutCardIdx(10, 3, 2) == 9);
+  assert(cutCardIdx(10, 3, 0) == 7);
+  assert(cutCardIdx(10, 3, 9) == 6);
+  assert(cutCardIdx(10, -4, 6) == 0);
+  assert(cutCardIdx(10, -4, 5) == 9);
+  assert(cutCardIdx(10, -4, 0) == 4);
+  assert(dealWithIncrementIdx(10, 3, 0) == 0);
+  assert(dealWithIncrementIdx(10, 3, 7) == 1);
+  assert(dealWithIncrementIdx(10, 3, 4) == 2);
+  assert(dealWithIncrementIdx(10, 3, 1) == 3);
+
+  assert(suffleIdx(p1SuffleSteps, 10007, 2019) == 8191);
+  
   // Part 2
-  // Deck startingDeck = getSpaceCardDeck(119315717514047);
-  // for (Card i = 0; i < 101741582076661; i++)
-  // {
-  //   startingDeck = suffle(p1SuffleSteps, startingDeck);
-  // }
+  const unsigned long long suffleCount = 101741582076661;
+  const Card hugeDeckLength = 119315717514047;
+  // On ne peut pas boucler autant de fois
+  // Par contre le suffle appliqué une fois à lui même nous donne un double suffle
+  // le double suffle appliqué à lui même nous donne un quadruple suffle
+  // le quadruple fois 2 => fois 8
+  // etc.
+  // ainsi on arrive en 47 opérations à plus des 101 trillions de suffles répétitifs attendus
   
   return 0;
 }
