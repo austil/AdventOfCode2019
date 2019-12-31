@@ -16,5 +16,5 @@ Stats thx to [Activity Watch](https://github.com/ActivityWatch/activitywatch):
 * day 21 : 2h
 * day 22 : part 1 in 1h10min, tried part 2 for 2hours
 * day 23 : 1h15min
-* day 24
+* day 24 : 4h20
 * day 25 : part 1 in 35min
