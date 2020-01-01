@@ -5,7 +5,7 @@ This year with C++.
 Stats thx to [Activity Watch](https://github.com/ActivityWatch/activitywatch):
 
 * day 11 : 1h41min
-* day 12
+* day 12 : 2h
 * day 13 : 2h
 * day 14 : wip at 4h45min
 * day 16 : wip 2h
