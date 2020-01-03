@@ -6,7 +6,7 @@
 using Chemical = string;
 using Quantity = unsigned long;
 
-using ReagantMap = unordered_map<Chemical, Quantity>;
+using ReagentMap = unordered_map<Chemical, Quantity>;
 
 struct Reagent 
 { 
@@ -45,68 +45,68 @@ ReactionOutputsMap parseReactionList(const vector<string> list) {
   return map;
 }
 
-vector<Reagent> scaleInputs(const ReactionOutputsMap &reactionOutputsMap, Reagent reagent) {
-  const auto reagentRecipe = reactionOutputsMap.at(reagent.chemical);
+Reaction scaleReaction(const ReactionOutputsMap &reactionOutputsMap, Reagent reagent) {
+  assert(reagent.quantity > 0);
+  
   vector<Reagent> scalledInputs;
+  Reagent scalledOutputs = reagent;
+
+  const auto reagentRecipe = reactionOutputsMap.at(reagent.chemical);
+  const auto roundUnit = reagent.quantity % reagentRecipe.output.quantity == 0 ? 0 : 1;
+  const auto scaleFactor = reagent.quantity / reagentRecipe.output.quantity + roundUnit;
+
   for(const auto input : reagentRecipe.inputs) {
     Reagent scaledInput = input;
     if(reagent.quantity > reagentRecipe.output.quantity) {
-      const auto roundedUnit = reagent.quantity % reagentRecipe.output.quantity == 0 ? 0 : 1;
-      scaledInput.quantity *= reagent.quantity / reagentRecipe.output.quantity + roundedUnit;
+      scaledInput.quantity *= scaleFactor;
     }
     scalledInputs.push_back(scaledInput);
   }
-  return scalledInputs;
+
+  scalledOutputs.quantity = reagentRecipe.output.quantity * scaleFactor;
+
+  return {scalledInputs, scalledOutputs};
 }
 
-ReagantMap mergeReagant(const vector<Reagent> &reagents) {
-  ReagantMap mergedReagents;
-  for(const auto r : reagents) {
-    const auto entry = mergedReagents.find(r.chemical);
-    if(entry == mergedReagents.cend()) {
-      mergedReagents.insert({r.chemical, r.quantity});
-    } else {
-      mergedReagents.at(r.chemical) += r.quantity;
+pair<ReagentMap, ReagentMap> expandReaction(
+  const ReactionOutputsMap &reactionOutputsMap,
+  Reagent desiredReagent,
+  ReagentMap waste = {}
+) {
+  if(desiredReagent.chemical == "ORE" || desiredReagent.quantity == 0) {
+    return {
+      {{desiredReagent.chemical, desiredReagent.quantity}},
+      waste
+    };
+  }
+
+  ReagentMap expanded;
+  auto currentReaction = scaleReaction(reactionOutputsMap, desiredReagent);
+
+  if(currentReaction.output.quantity > desiredReagent.quantity) {
+    waste[desiredReagent.chemical] += currentReaction.output.quantity - desiredReagent.quantity;
+  }
+
+  for(auto &input : currentReaction.inputs) {
+    int toProduce = input.quantity - waste[input.chemical];
+    if(toProduce > 0) {
+      input.quantity = toProduce;
+      waste[input.chemical] = 0;
+      const auto [e, w] = expandReaction(reactionOutputsMap, input, waste);
+      for(const auto r : e) {
+        expanded[r.first] += r.second;
+      }
+      for(const auto r : w) {
+        waste[r.first] = r.second;
+      }
+    }
+    else {
+      input.quantity = 0;
+      waste[input.chemical] = -toProduce;
     }
   }
-  return mergedReagents;
-}
 
-vector<Reagent> reagentMapToVector(const ReagantMap &map) {
-  vector<Reagent> vector;
-  for(const auto [chemical, quantity] : map) {
-    vector.push_back({chemical, quantity});
-  }
-  return vector;
-}
-
-vector<Reagent> expandInputs(const ReactionOutputsMap &reactionOutputsMap, Reagent reagent) {
-  const auto scaledInputs = scaleInputs(reactionOutputsMap, reagent);
-  if(scaledInputs.size() == 1 /* && scaledInputs.front().chemical == "ORE" */) {
-    return {reagent};
-  }
-
-  vector<Reagent> expanded;
-  for(const auto r : scaledInputs) {
-    assert(r.chemical != "ORE");
-    const auto recurse = expandInputs(reactionOutputsMap, r);
-    expanded.insert(expanded.cend(), recurse.cbegin(), recurse.cend());
-  }
-
-  return expanded;
-}
-
-size_t oreLookup(const ReactionOutputsMap &reactionOutputsMap, const ReagantMap &map) {
-  size_t oreCount = 0;
-  for(const auto [chemical, quantity] : map) {
-    Reagent currentReagent = {chemical, quantity};
-    while (currentReagent.chemical != "ORE")
-    {
-      currentReagent = scaleInputs(reactionOutputsMap, currentReagent).front();
-    }
-    oreCount += currentReagent.quantity;
-  }
-  return oreCount;
+  return {expanded, waste};
 }
 
 const vector<string> testNanofactory1 = {
@@ -181,61 +181,37 @@ int main(int argc, char const *argv[])
   const auto testReactions1 = parseReactionList(testNanofactory1);
   assert(testReactions1.size() == 6);
 
-  const auto sevenADetails = scaleInputs(testReactions1, {"A", 7});
-  assert(sevenADetails.size() == 1);
-  assert(sevenADetails.front().chemical == "ORE");
-  assert(sevenADetails.front().quantity == 10);
+  const auto sevenADetails = scaleReaction(testReactions1, {"A", 7});
+  assert(sevenADetails.inputs.size() == 1);
+  assert(sevenADetails.inputs.front().chemical == "ORE");
+  assert(sevenADetails.inputs.front().quantity == 10);
+  assert(sevenADetails.output.quantity == 10);
 
-  const auto twelveADetails = scaleInputs(testReactions1, {"A", 12});
-  assert(twelveADetails.size() == 1);
-  assert(twelveADetails.front().chemical == "ORE");
-  assert(twelveADetails.front().quantity == 20);
+  const auto twelveADetails = scaleReaction(testReactions1, {"A", 12});
+  assert(twelveADetails.inputs.size() == 1);
+  assert(twelveADetails.inputs.front().chemical == "ORE");
+  assert(twelveADetails.inputs.front().quantity == 20);
+  assert(twelveADetails.output.quantity == 20);
 
-  const auto oneCDetails = scaleInputs(testReactions1, {"C", 1});
-  assert(oneCDetails.size() == 2);
-  assert(oneCDetails.front().chemical == "A");
-  assert(oneCDetails.front().quantity == 7);
-  assert(oneCDetails.back().chemical == "B");
-  assert(oneCDetails.back().quantity == 1);
+  const auto oneCDetails = scaleReaction(testReactions1, {"C", 1});
+  assert(oneCDetails.inputs.size() == 2);
+  assert(oneCDetails.inputs.front().chemical == "A");
+  assert(oneCDetails.inputs.front().quantity == 7);
+  assert(oneCDetails.inputs.back().chemical == "B");
+  assert(oneCDetails.inputs.back().quantity == 1);
+  assert(oneCDetails.output.quantity == 1);
 
-  const auto expandOneC = mergeReagant(expandInputs(testReactions1, {"C", 1}));
-  assert(expandOneC.size() == 2);
-  assert(expandOneC.at("A") == 7);
-  assert(expandOneC.at("B") == 1);
+  assert(expandReaction(testReactions1, {"C", 1}).first.at("ORE") = 11);
+  assert(expandReaction(testReactions1, {"C", 1}, {{"A", 7}}).first.at("ORE") = 1);
+  assert(expandReaction(testReactions1, {"FUEL", 1}).first.at("ORE") == 31);
 
-  const auto expandFuel = mergeReagant(expandInputs(testReactions1, {"FUEL", 1}));
-  assert(expandFuel.size() == 2);
-  assert(expandFuel.at("A") == 28);
-  assert(expandFuel.at("B") == 1);
-  assert(oreLookup(testReactions1, expandFuel) == 31);
+  assert(expandReaction(parseReactionList(testNanofactory2), {"FUEL", 1}).first.at("ORE") == 165);
+  assert(expandReaction(parseReactionList(testNanofactory3), {"FUEL", 1}).first.at("ORE") == 13312);
+  assert(expandReaction(parseReactionList(testNanofactory4), {"FUEL", 1}).first.at("ORE") == 180697);
+  assert(expandReaction(parseReactionList(testNanofactory5), {"FUEL", 1}).first.at("ORE") == 2210736);
 
-  const auto testReactions2 = parseReactionList(testNanofactory2);
-  const auto twoAB = scaleInputs(testReactions2, {"AB", 2});
-  assert(twoAB.size() == 2);
-  assert(twoAB.front().chemical == "A");
-  assert(twoAB.front().quantity == 6);
-  assert(twoAB.back().chemical == "B");
-  assert(twoAB.back().quantity == 8);
-  const auto t2ReagantMap =  mergeReagant(expandInputs(testReactions2, {"FUEL", 1}));
-  assert(oreLookup(testReactions2, t2ReagantMap)  == 165);
-
-  const auto testReactions3 = parseReactionList(testNanofactory3);
-  const auto t3ReagantMap =  mergeReagant(expandInputs(testReactions3, {"FUEL", 1}));
-  assert(oreLookup(testReactions3, t3ReagantMap) == 13312);
-
-  const auto testReactions4 = parseReactionList(testNanofactory4);
-  const auto t4ReagantMap =  mergeReagant(expandInputs(testReactions4, {"FUEL", 1}));
-  assert(oreLookup(testReactions4, t4ReagantMap) == 180697);
-
-  const auto testReactions5 = parseReactionList(testNanofactory5);
-  const auto t5ReagantMap =  mergeReagant(expandInputs(testReactions5, {"FUEL", 1}));
-  assert(oreLookup(testReactions5, t5ReagantMap) == 2210736);
-
-  // Part 1
-  const auto p1Input = getPuzzleInput("inputs/aoc_day14_1.txt");
-  const auto p1Reactions = parseReactionList(p1Input);
-  const auto p1ReagantMap =  mergeReagant(expandInputs(p1Reactions, {"FUEL", 1}));
-  cout << "Part1, amount of ORE for one FUEL: " << oreLookup(p1Reactions, p1ReagantMap) << "\n";
-
+  const auto input = parseReactionList(getPuzzleInput("inputs/aoc_day14_1.txt"));
+  cout << "Part1, FUEL required : " << expandReaction(input, {"FUEL", 1}).first.at("ORE") << "\n";
+  
   return 0;
 }
