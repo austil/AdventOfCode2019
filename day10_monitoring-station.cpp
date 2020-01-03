@@ -1,19 +1,20 @@
 #include <iostream>
+#include <map>
+#include <set>
 #include <cassert>
 #include "utils.cpp"
 #include "coordinate.cpp"
 
+const auto PI = 3.141592653589793238463;
+
 vector<Coordinate> parse(vector<string> map)
 {
   vector<Coordinate> asteroidCoordinates;
-  for (size_t y = 0; y < map.size(); y++)
-  {
-    for (size_t x = 0; x < map.at(y).size(); x++)
-    {
+  for (size_t y = 0; y < map.size(); y++) {
+    for (size_t x = 0; x < map.at(y).size(); x++) {
       const auto here = map.at(y).at(x);
-      if (here == '#')
-      {
-        asteroidCoordinates.push_back({x, y});
+      if (here == '#') {
+        asteroidCoordinates.push_back({static_cast<int>(x), static_cast<int>(y)});
       }
     }
   }
@@ -43,6 +44,18 @@ struct StationCandidate
   int reachability = 0;
 };
 
+vector<vector<Coordinate>> getTriplets(const vector<Coordinate> &asteroids) {
+  vector<vector<Coordinate>> possibleTriplets;
+  for (size_t i = 0; i < asteroids.size(); i++){
+    for (size_t j = i+1; j < asteroids.size(); j++){
+      for (size_t k = j+1; k < asteroids.size(); k++){
+        possibleTriplets.push_back({asteroids.at(i), asteroids.at(j), asteroids.at(k)});
+      }
+    }
+  }
+  return possibleTriplets;
+};
+
 using blockedLineOfSightMap = unordered_map<Coordinate, unordered_set<Coordinate, CoordinateHash>, CoordinateHash>;
 
 StationCandidate getBestAsteroid(const vector<Coordinate> &asteroids) {
@@ -51,8 +64,7 @@ StationCandidate getBestAsteroid(const vector<Coordinate> &asteroids) {
     blockedLineOfSight[a] = {};
   }
 
-  const vector<vector<Coordinate>> possibleTriplets = cart_product<Coordinate>({asteroids, asteroids, asteroids});
-
+  const auto possibleTriplets = getTriplets(asteroids);
   for(const auto triplet : possibleTriplets) {
     const bool noDuplicate = triplet[0] != triplet[1] 
       && triplet[0] != triplet[2] 
@@ -84,6 +96,44 @@ StationCandidate getBestAsteroid(const vector<Coordinate> &asteroids) {
   return best;
 }
 
+struct compDistanceToStation {
+  Coordinate monitoringStation;
+  bool operator()(const Coordinate &a, const Coordinate &b) {
+    return squaredDistance(monitoringStation, a) > squaredDistance(monitoringStation, b);
+  };
+};
+
+vector<Coordinate> vaporizeAsteroids(const vector<Coordinate> &asteroids, const Coordinate &monitoringStation) {
+  compDistanceToStation comp {monitoringStation};
+  map<double, set<Coordinate, decltype(comp)>> asteroidAngles;
+  for(const auto &a : asteroids) {
+    if(a != monitoringStation) {
+      const double angleFromAbscissa = atan2(monitoringStation.y - a.y, monitoringStation.x - a.x) * (180 / PI);
+      const double angleFromLaserStart = 
+        (90 <= angleFromAbscissa && angleFromAbscissa <= 180) ? angleFromAbscissa - 90 :
+        (-180 <= angleFromAbscissa && angleFromAbscissa <= 90) ? 270 + angleFromAbscissa : 0;
+      const double roundedAngle = round(angleFromLaserStart * 1000.0) / 1000.0;
+      asteroidAngles[roundedAngle].insert(a);
+      // cout << a << " : " << angleFromAbscissa << " => " << roundedAngle << "\n";
+    }
+  }
+
+  vector<Coordinate> vaporized;
+  while(!asteroidAngles.empty()) {
+    cout << "--- " << asteroidAngles.size() << "\n";
+    for(auto it = asteroidAngles.begin(); it != asteroidAngles.end(); ++it) {
+      cout << it->first << "\n";
+      auto &asteroidsInLine = it->second;
+      vaporized.push_back(*asteroidsInLine.begin());
+      asteroidsInLine.erase(asteroidsInLine.begin());
+      if(asteroidsInLine.empty()) {
+        asteroidAngles.erase(it);
+      }
+    }
+  }
+  return vaporized;
+}
+
 const vector<string> testMap1 = {
   ".#..#",
   ".....",
@@ -105,6 +155,14 @@ const vector<string> testMap2 = {
   ".#....####",
 };
 
+const vector<string> testMap3 = {
+  ".#....#####...#..",
+  "##...##.#####..##",
+  "##...#...#.#####.",
+  "..#.....X...###..",
+  "..#.#.....#....##",
+};
+
 int main(int argc, char const *argv[])
 {
   assert(areAligned({0, 0}, {2, 4}, {1, 1}) == false);
@@ -121,7 +179,6 @@ int main(int argc, char const *argv[])
   assert(testAsteroids1.front().y == 0);
   assert(testAsteroids1.back().x == 4);
   assert(testAsteroids1.back().y == 4);
-  assert(cart_product<Coordinate>({testAsteroids1, testAsteroids1, testAsteroids1}).size() == 1000);
 
   const auto t1Res = getBestAsteroid(testAsteroids1);
   assert(t1Res.coordinate.x == 3);
@@ -133,10 +190,18 @@ int main(int argc, char const *argv[])
   assert(t2Res.coordinate.y == 8);
   assert(t2Res.reachability == 33);
 
-  const auto p1Input = parse(getPuzzleInput("inputs/aoc_day10_1.txt"));
-  cout << "Part1, got " << p1Input.size() << " asteroid\n"; 
-  const auto p1 = getBestAsteroid(p1Input);
-  cout << "Part1, asteroid " << p1.coordinate << " have the best reachability: " << p1.reachability << "\n";
+  // const auto p1Input = parse(getPuzzleInput("inputs/aoc_day10_1.txt"));
+  // cout << "Part1, got " << p1Input.size() << " asteroid\n"; 
+  // const auto p1 = getBestAsteroid(p1Input);
+  // cout << "Part1, asteroid " << p1.coordinate << " have the best reachability: " << p1.reachability << "\n";
+
+  // Part 2
+  const Coordinate testMonitoringStation {8,3};
+  const auto testAsteroids3 = parse(testMap3);
+  const auto vaporizeOrder = vaporizeAsteroids(testAsteroids3, testMonitoringStation);
+  assert(vaporizeOrder.size() == testAsteroids3.size());
+  assert(vaporizeOrder.at(0) == id<Coordinate>({8, 1}));
+  assert(vaporizeOrder.at(30) == id<Coordinate>({8, 0}));
 
   return 0;
 }
