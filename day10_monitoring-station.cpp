@@ -119,17 +119,20 @@ vector<Coordinate> vaporizeAsteroids(const vector<Coordinate> &asteroids, const 
   }
 
   vector<Coordinate> vaporized;
-  while(!asteroidAngles.empty()) {
-    cout << "--- " << asteroidAngles.size() << "\n";
+  size_t asteroidVaporizedLastSpin = 1;
+
+  while(asteroidVaporizedLastSpin > 0) {
+    asteroidVaporizedLastSpin = 0;
     for(auto it = asteroidAngles.begin(); it != asteroidAngles.end(); ++it) {
-      cout << it->first << "\n";
       auto &asteroidsInLine = it->second;
-      vaporized.push_back(*asteroidsInLine.begin());
-      asteroidsInLine.erase(asteroidsInLine.begin());
-      if(asteroidsInLine.empty()) {
-        asteroidAngles.erase(it);
+      // cout << it->first << " " << it->second.size() << "\n";
+      if(!asteroidsInLine.empty()) {
+        vaporized.push_back(*asteroidsInLine.begin());
+        asteroidsInLine.erase(asteroidsInLine.begin());
+        asteroidVaporizedLastSpin++;
       }
     }
+    // cout << "Vaporized " << asteroidVaporizedLastSpin << "\n";
   }
   return vaporized;
 }
@@ -190,18 +193,21 @@ int main(int argc, char const *argv[])
   assert(t2Res.coordinate.y == 8);
   assert(t2Res.reachability == 33);
 
-  // const auto p1Input = parse(getPuzzleInput("inputs/aoc_day10_1.txt"));
-  // cout << "Part1, got " << p1Input.size() << " asteroid\n"; 
-  // const auto p1 = getBestAsteroid(p1Input);
-  // cout << "Part1, asteroid " << p1.coordinate << " have the best reachability: " << p1.reachability << "\n";
+  const auto p1Input = parse(getPuzzleInput("inputs/aoc_day10_1.txt"));
+  cout << "Part1, got " << p1Input.size() << " asteroid\n"; 
+  const auto p1 = getBestAsteroid(p1Input);
+  cout << "Part1, asteroid " << p1.coordinate << " have the best reachability: " << p1.reachability << "\n";
 
   // Part 2
   const Coordinate testMonitoringStation {8,3};
   const auto testAsteroids3 = parse(testMap3);
-  const auto vaporizeOrder = vaporizeAsteroids(testAsteroids3, testMonitoringStation);
-  assert(vaporizeOrder.size() == testAsteroids3.size());
-  assert(vaporizeOrder.at(0) == id<Coordinate>({8, 1}));
-  assert(vaporizeOrder.at(30) == id<Coordinate>({8, 0}));
+  const auto testVaporizeOrder = vaporizeAsteroids(testAsteroids3, testMonitoringStation);
+  assert(testVaporizeOrder.size() == testAsteroids3.size());
+  assert(testVaporizeOrder.at(0) == id<Coordinate>({8, 1}));
+  assert(testVaporizeOrder.at(30) == id<Coordinate>({8, 0}));
+
+  const auto vaporizeOrder = vaporizeAsteroids(p1Input,  p1.coordinate);
+  cout << "Part2, 200th asteroid vaporized: " << vaporizeOrder.at(199) << "\n";
 
   return 0;
 }
